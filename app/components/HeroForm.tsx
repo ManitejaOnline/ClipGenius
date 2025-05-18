@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, TouchEvent } from "react";
 
 interface VideoPreview {
   outputPath: string;
@@ -15,6 +15,7 @@ interface FormState {
   error: string | null;
   previews: VideoPreview[] | null;
   progress: string | null;
+  currentPreviewIndex: number;
 }
 
 interface ProcessResponse {
@@ -47,7 +48,30 @@ const HeroForm: React.FC = () => {
     error: null,
     previews: null,
     progress: null,
+    currentPreviewIndex: 0
   });
+
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+
+  const handleTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeDistance = touchEndX.current - touchStartX.current;
+    if (Math.abs(swipeDistance) > 50) { // minimum swipe distance
+      if (swipeDistance > 0) {
+        handlePrevPreview();
+      } else {
+        handleNextPreview();
+      }
+    }
+  };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormState(prev => ({
@@ -59,13 +83,21 @@ const HeroForm: React.FC = () => {
     }));
   };
 
-  const checkFFmpegAvailability = async (): Promise<boolean> => {
-    try {
-      const response = await fetch('/api/process');
-      const data = await response.json();
-      return data.success;
-    } catch {
-      return false;
+  const handleNextPreview = () => {
+    if (formState.previews && formState.previews.length > 0) {
+      setFormState(prev => ({
+        ...prev,
+        currentPreviewIndex: (prev.currentPreviewIndex + 1) % formState.previews!.length
+      }));
+    }
+  };
+
+  const handlePrevPreview = () => {
+    if (formState.previews && formState.previews.length > 0) {
+      setFormState(prev => ({
+        ...prev,
+        currentPreviewIndex: (prev.currentPreviewIndex - 1 + formState.previews!.length) % formState.previews!.length
+      }));
     }
   };
 
@@ -93,23 +125,10 @@ const HeroForm: React.FC = () => {
       isLoading: true,
       error: null,
       previews: null,
-      progress: "Checking system requirements...",
+      progress: "Processing video...",
     }));
 
-    // Check if FFmpeg is available
-    const isFFmpegAvailable = await checkFFmpegAvailability();
-    if (!isFFmpegAvailable) {
-      setFormState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: "FFmpeg is not installed. Please install FFmpeg to process videos.",
-      }));
-      return;
-    }
-
     try {
-      setFormState(prev => ({ ...prev, progress: "Generating previews..." }));
-      
       const response = await fetch('/api/process', {
         method: 'POST',
         headers: {
@@ -117,10 +136,6 @@ const HeroForm: React.FC = () => {
         },
         body: JSON.stringify({
           url: formState.url,
-          resolution: {
-            width: 1080,
-            height: 1920,
-          },
         }),
       });
 
@@ -151,12 +166,7 @@ const HeroForm: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-4">
-      <form
-        id="start"
-        onSubmit={handleSubmit}
-        className="w-full max-w-xl mx-auto"
-        aria-label="Video conversion form"
-      >
+      <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto" aria-label="Video conversion form">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <input
@@ -180,7 +190,6 @@ const HeroForm: React.FC = () => {
                   ? 'bg-blue-700 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
               } px-6 py-2 rounded font-semibold transition-colors min-w-[160px] text-white`}
-              aria-label="Generate shorts from video"
               disabled={formState.isLoading}
             >
               {formState.isLoading ? (
@@ -192,19 +201,19 @@ const HeroForm: React.FC = () => {
                   Processing...
                 </span>
               ) : (
-                'Generate Previews'
+                'Generate Shorts'
               )}
             </button>
           </div>
           
           {formState.error && (
-            <p id="url-error" className="text-red-500 text-sm mt-2 text-left" role="alert">
+            <p id="url-error" className="text-red-500 text-sm mt-2" role="alert">
               {formState.error}
             </p>
           )}
           
           {formState.progress && !formState.error && (
-            <p className="text-green-500 text-sm mt-2 text-left">
+            <p className="text-green-500 text-sm mt-2">
               {formState.progress}
             </p>
           )}
@@ -212,32 +221,84 @@ const HeroForm: React.FC = () => {
       </form>
 
       {formState.previews && (
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-          {formState.previews.map((preview, index) => (
-            <div key={index} className="flex flex-col items-center gap-4 p-6 bg-gray-800 rounded-lg shadow-lg">
-              <div className="relative w-full aspect-[9/16] bg-black rounded-lg overflow-hidden">
-                <video
-                  src={preview.outputPath}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  controls
-                  poster={preview.thumbnail}
-                />
+        <div className="mt-8 flex flex-col items-center">
+          <div className="relative w-full max-w-6xl flex items-center justify-center px-4">
+            {/* Previous Button - Smaller and responsive */}
+            <button
+              onClick={handlePrevPreview}
+              className="absolute left-0 md:left-4 z-20 p-2 md:p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors transform hover:scale-110"
+              aria-label="Previous preview"
+            >
+              <svg className="w-6 h-6 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Preview Container */}
+            <div className="flex items-center justify-center gap-2 md:gap-4 w-full">
+              {/* Previous Preview (Blurred) */}
+              {formState.currentPreviewIndex > 0 && (
+                <div className="relative w-[120px] md:w-[250px] h-[240px] md:h-[500px] opacity-50 blur-sm transition-all duration-300 hidden md:block">
+                  <video
+                    src={formState.previews[(formState.currentPreviewIndex - 1)].outputPath}
+                    className="w-full h-full object-cover rounded-xl"
+                    poster={formState.previews[(formState.currentPreviewIndex - 1)].thumbnail}
+                    playsInline
+                    muted
+                  />
+                </div>
+              )}
+
+              {/* Current Preview */}
+              <div className="relative w-[270px] md:w-[360px] h-[540px] md:h-[720px] z-10">
+                <div className="w-full h-full bg-gray-800 rounded-xl overflow-hidden shadow-2xl">
+                  <video
+                    src={formState.previews[formState.currentPreviewIndex].outputPath}
+                    className="w-full h-full object-cover"
+                    controls
+                    poster={formState.previews[formState.currentPreviewIndex].thumbnail}
+                    playsInline
+                  />
+                </div>
               </div>
-              <div className="text-sm text-gray-300 font-medium">
-                Preview {index + 1} - Start: {preview.startTime}s
-              </div>
-              <a
-                href={preview.outputPath}
-                download
-                className="inline-flex items-center px-6 py-2.5 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-white transition-colors gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download Preview
-              </a>
+
+              {/* Next Preview (Blurred) */}
+              {formState.currentPreviewIndex < formState.previews.length - 1 && (
+                <div className="relative w-[120px] md:w-[250px] h-[240px] md:h-[500px] opacity-50 blur-sm transition-all duration-300 hidden md:block">
+                  <video
+                    src={formState.previews[(formState.currentPreviewIndex + 1)].outputPath}
+                    className="w-full h-full object-cover rounded-xl"
+                    poster={formState.previews[(formState.currentPreviewIndex + 1)].thumbnail}
+                    playsInline
+                    muted
+                  />
+                </div>
+              )}
             </div>
-          ))}
+
+            {/* Next Button - Smaller and responsive */}
+            <button
+              onClick={handleNextPreview}
+              className="absolute right-0 md:right-4 z-20 p-2 md:p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors transform hover:scale-110"
+              aria-label="Next preview"
+            >
+              <svg className="w-6 h-6 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Download Button */}
+          <a
+            href={formState.previews[formState.currentPreviewIndex].outputPath}
+            download
+            className="mt-6 inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white transition-colors gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Preview
+          </a>
         </div>
       )}
     </div>

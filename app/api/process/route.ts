@@ -7,12 +7,29 @@ import type { FfmpegCommand } from 'fluent-ffmpeg';
 // Use dynamic import for fluent-ffmpeg
 let ffmpeg: any;
 
+// Types
+interface ProcessRequestBody {
+  url: string;
+  startTime?: number; // in seconds
+  duration?: number; // in seconds
+}
+
+interface ProcessResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    outputPath?: string;
+    duration?: number;
+  };
+  error?: string;
+}
+
 // Constants
 const VIDEO_DIR = path.join(process.cwd(), 'public', 'temp');
 const YTDLP_PATH = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
 
 // Preview configurations
-const PREVIEW_CONFIGS = [
+const DEFAULT_PREVIEW_CONFIGS = [
   { startTime: 5, duration: 30 },
   { startTime: 35, duration: 30 },
   { startTime: 65, duration: 30 },
@@ -32,6 +49,40 @@ async function initializeFfmpeg() {
   return ffmpeg;
 }
 
+// Helper function to find silence around a target time
+async function findNearestSilence(
+  ffmpegModule: any,
+  inputPath: string,
+  targetTime: number,
+  searchWindow: number = 5
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const startSearch = Math.max(0, targetTime - searchWindow);
+    
+    ffmpegModule(inputPath)
+      .setStartTime(startSearch)
+      .setDuration(searchWindow * 2)
+      .audioFilters([
+        'silencedetect=noise=-30dB:d=0.2' // Detect silence below -30dB lasting at least 0.2 seconds
+      ])
+      .output('pipe:1')
+      .format('null')
+      .on('stderr', (stderrLine: string) => {
+        // Parse silence detection output
+        const silenceStart = stderrLine.match(/silence_start: ([\d.]+)/);
+        if (silenceStart) {
+          const time = parseFloat(silenceStart[1]) + startSearch;
+          if (Math.abs(time - targetTime) <= searchWindow) {
+            resolve(time);
+          }
+        }
+      })
+      .on('end', () => resolve(targetTime)) // If no silence found, use original time
+      .on('error', (err: Error) => reject(err))
+      .run();
+  });
+}
+
 // Helper function to process a single preview
 async function processPreview(
   ffmpegModule: any,
@@ -41,32 +92,74 @@ async function processPreview(
   duration: number,
   resolution: { width: number; height: number }
 ): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    ffmpegModule(inputPath)
-      .setStartTime(startTime)
-      .setDuration(duration)
-      .size(`${resolution.width}x${resolution.height}`)
-      .autopad(true, 'black')
-      .outputOptions([
-        '-c:v libx264',
-        '-c:a aac',
-        '-b:v 4M',
-        '-b:a 192k',
-        '-r 30',
-        '-pix_fmt yuv420p',
-        '-preset medium',
-        '-movflags +faststart',
-        '-profile:v high',
-        '-level 4.0',
-        '-maxrate 5M',
-        '-bufsize 5M',
-        '-filter:v crop=ih*9/16:ih,scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black'
-      ])
-      .output(outputPath)
-      .on('end', () => resolve())
-      .on('error', (err: Error) => reject(new Error(`FFmpeg error: ${err.message}`)))
-      .run();
-  });
+  try {
+    // Find the nearest silence point to our desired start time
+    const adjustedStartTime = await findNearestSilence(ffmpegModule, inputPath, startTime);
+    
+    return new Promise<void>((resolve, reject) => {
+      ffmpegModule(inputPath)
+        .setStartTime(adjustedStartTime)
+        .setDuration(duration)
+        .size(`${resolution.width}x${resolution.height}`)
+        .autopad(true, 'black')
+        .audioFilters([
+          'afade=t=in:st=0:d=0.5',  // Add 0.5s audio fade in
+          `afade=t=out:st=${duration-0.5}:d=0.5` // Add 0.5s audio fade out
+        ])
+        .videoFilters([
+          'fade=in:0:25',  // Add 25 frame video fade in (about 0.8s at 30fps)
+          `fade=out:${duration*30-25}:25` // Add 25 frame video fade out
+        ])
+        .outputOptions([
+          '-c:v libx264',
+          '-c:a aac',
+          '-b:v 4M',
+          '-b:a 192k',
+          '-r 30',
+          '-pix_fmt yuv420p',
+          '-preset medium',
+          '-movflags +faststart',
+          '-profile:v high',
+          '-level 4.0',
+          '-maxrate 5M',
+          '-bufsize 5M',
+          '-filter:v crop=ih*9/16:ih,scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black'
+        ])
+        .output(outputPath)
+        .on('end', () => resolve())
+        .on('error', (err: Error) => reject(new Error(`FFmpeg error: ${err.message}`)))
+        .run();
+    });
+  } catch (error) {
+    console.error('Error finding silence point:', error);
+    // Fallback to original start time if silence detection fails
+    return new Promise<void>((resolve, reject) => {
+      ffmpegModule(inputPath)
+        .setStartTime(startTime)
+        .setDuration(duration)
+        .size(`${resolution.width}x${resolution.height}`)
+        .autopad(true, 'black')
+        .outputOptions([
+          '-c:v libx264',
+          '-c:a aac',
+          '-b:v 4M',
+          '-b:a 192k',
+          '-r 30',
+          '-pix_fmt yuv420p',
+          '-preset medium',
+          '-movflags +faststart',
+          '-profile:v high',
+          '-level 4.0',
+          '-maxrate 5M',
+          '-bufsize 5M',
+          '-filter:v crop=ih*9/16:ih,scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black'
+        ])
+        .output(outputPath)
+        .on('end', () => resolve())
+        .on('error', (err: Error) => reject(new Error(`FFmpeg error: ${err.message}`)))
+        .run();
+    });
+  }
 }
 
 // GET endpoint to check FFmpeg availability
@@ -109,7 +202,7 @@ export async function POST(request: Request) {
   try {
     const ffmpegModule = await initializeFfmpeg();
     const body = await request.json();
-    const { url, resolution = { width: 1080, height: 1920 } } = body;
+    const { url, startTimes } = body;
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({
@@ -166,9 +259,14 @@ export async function POST(request: Request) {
       });
     });
 
+    // Use provided start times or default configurations
+    const previewConfigs = startTimes 
+      ? startTimes.map(startTime => ({ startTime, duration: 30 }))
+      : DEFAULT_PREVIEW_CONFIGS;
+
     // Process each preview
     const previews = await Promise.all(
-      PREVIEW_CONFIGS.map(async (config, index) => {
+      previewConfigs.map(async (config, index) => {
         const outputPath = path.join(VIDEO_DIR, `${videoId}-preview-${index + 1}.mp4`);
         const relativeOutputPath = `/temp/${videoId}-preview-${index + 1}.mp4`;
 
@@ -178,7 +276,7 @@ export async function POST(request: Request) {
           outputPath,
           config.startTime,
           config.duration,
-          resolution
+          { width: 1080, height: 1920 }
         );
 
         return {

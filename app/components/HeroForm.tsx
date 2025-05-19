@@ -16,6 +16,7 @@ interface FormState {
   previews: VideoPreview[] | null;
   progress: string | null;
   currentPreviewIndex: number;
+  selectedEmotion: string | null;
 }
 
 interface ProcessResponse {
@@ -41,6 +42,13 @@ const isValidYouTubeUrl = (url: string): boolean => {
   }
 };
 
+const emotions = [
+  { id: 'happy', label: '😊 Happy', description: 'Energetic and upbeat moments' },
+  { id: 'sad', label: '😢 Sad', description: 'Emotional and touching scenes' },
+  { id: 'excited', label: '🎉 Excited', description: 'High-energy and thrilling parts' },
+  { id: 'calm', label: '😌 Calm', description: 'Peaceful and relaxing sections' }
+];
+
 const HeroForm: React.FC = () => {
   const [formState, setFormState] = useState<FormState>({
     url: "",
@@ -48,7 +56,8 @@ const HeroForm: React.FC = () => {
     error: null,
     previews: null,
     progress: null,
-    currentPreviewIndex: 0
+    currentPreviewIndex: 0,
+    selectedEmotion: null
   });
 
   const touchStartX = useRef<number>(0);
@@ -101,6 +110,13 @@ const HeroForm: React.FC = () => {
     }
   };
 
+  const handleEmotionSelect = (emotionId: string) => {
+    setFormState(prev => ({
+      ...prev,
+      selectedEmotion: prev.selectedEmotion === emotionId ? null : emotionId
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -136,6 +152,9 @@ const HeroForm: React.FC = () => {
         },
         body: JSON.stringify({
           url: formState.url,
+          options: {
+            targetEmotion: formState.selectedEmotion
+          }
         }),
       });
 
@@ -185,11 +204,7 @@ const HeroForm: React.FC = () => {
             />
             <button
               type="submit"
-              className={`${
-                formState.isLoading
-                  ? 'bg-blue-700 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              } px-6 py-2 rounded font-semibold transition-colors min-w-[160px] text-white`}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={formState.isLoading}
             >
               {formState.isLoading ? (
@@ -204,6 +219,30 @@ const HeroForm: React.FC = () => {
                 'Generate Shorts'
               )}
             </button>
+          </div>
+
+          {/* Emotion Selection */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Optional: Select Emotion Type
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {emotions.map(emotion => (
+                <button
+                  key={emotion.id}
+                  type="button"
+                  onClick={() => handleEmotionSelect(emotion.id)}
+                  className={`p-3 rounded-lg border transition-all ${
+                    formState.selectedEmotion === emotion.id
+                      ? 'border-blue-500 bg-blue-500/20 text-white'
+                      : 'border-gray-700 hover:border-gray-600 text-gray-300'
+                  }`}
+                >
+                  <div className="text-lg mb-1">{emotion.label}</div>
+                  <div className="text-xs opacity-75">{emotion.description}</div>
+                </button>
+              ))}
+            </div>
           </div>
           
           {formState.error && (
@@ -254,7 +293,7 @@ const HeroForm: React.FC = () => {
                 <div className="w-full h-full bg-gray-800 rounded-xl overflow-hidden shadow-2xl">
                   <video
                     src={formState.previews[formState.currentPreviewIndex].outputPath}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     controls
                     poster={formState.previews[formState.currentPreviewIndex].thumbnail}
                     playsInline

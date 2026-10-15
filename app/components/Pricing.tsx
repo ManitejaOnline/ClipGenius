@@ -9,40 +9,40 @@ const Pricing: React.FC = () => {
         <div className="mb-12">
           <h3 className="text-3xl font-bold mb-4">Choose Your Plan</h3>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Select the perfect plan for your content creation needs. All plans include our core AI features.
+            ClipGenius is free while in early access. Paid plans are coming soon.
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8 text-left">
           <div className="border border-gray-700 rounded-lg p-8 min-h-[320px] flex flex-col justify-between hover:border-gray-600 transition-colors">
             <div>
               <h4 className="text-2xl font-semibold text-white mb-3">Free</h4>
-              <p className="text-gray-300 mb-6 text-lg">Basic access to short generation with watermark.</p>
+              <p className="text-gray-300 mb-6 text-lg">Everything available today, no watermark.</p>
               <ul className="space-y-3 text-gray-400 mb-8">
                 <li className="flex items-center">
                   <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  5 shorts per day
+                  3 highlight clips per video
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  Basic editing tools
+                  Auto captions
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  720p quality
+                  1080p vertical MP4
                 </li>
               </ul>
             </div>
             <div>
               <p className="text-blue-400 font-bold text-3xl mb-4">$0<span className="text-lg">/month</span></p>
-              <button className="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 rounded-md text-white font-semibold transition-colors">
+              <a href="#start" className="block text-center w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 rounded-md text-white font-semibold transition-colors">
                 Get Started
-              </button>
+              </a>
             </div>
           </div>
           
@@ -82,8 +82,8 @@ const Pricing: React.FC = () => {
             </div>
             <div>
               <p className="text-white font-bold text-3xl mb-4">$9<span className="text-lg">/month</span></p>
-              <button className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold transition-colors">
-                Try Pro
+              <button disabled className="w-full py-3 px-4 bg-blue-600 rounded-md text-white font-semibold opacity-50 cursor-not-allowed">
+                Coming Soon
               </button>
             </div>
           </div>
@@ -121,8 +121,8 @@ const Pricing: React.FC = () => {
             </div>
             <div>
               <p className="text-blue-400 font-bold text-3xl mb-4">$89<span className="text-lg">/year</span></p>
-              <button className="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 rounded-md text-white font-semibold transition-colors">
-                Get Yearly
+              <button disabled className="w-full py-3 px-4 bg-gray-800 rounded-md text-white font-semibold opacity-50 cursor-not-allowed">
+                Coming Soon
               </button>
             </div>
           </div>

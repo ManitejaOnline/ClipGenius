@@ -51,6 +51,7 @@ type InfoState =
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const CLIP_DURATIONS = [15, 30, 60];
+const CLIP_COUNTS = [3, 4, 5];
 const JOB_POLL_INTERVAL_MS = 1500;
 
 const METHOD_LABELS: Record<HighlightMethod, string> = {
@@ -155,6 +156,7 @@ const HeroForm: React.FC = () => {
   const [info, setInfo] = useState<InfoState>({ status: "idle" });
   const [clipDuration, setClipDuration] = useState(30);
   const [captions, setCaptions] = useState(true);
+  const [clipCount, setClipCount] = useState(3);
   const [blurBackground, setBlurBackground] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -290,6 +292,7 @@ const HeroForm: React.FC = () => {
         body: JSON.stringify({
           url: `https://www.youtube.com/watch?v=${videoId}`,
           clipDuration,
+          clipCount,
           captions: captions && captionsAvailable,
           framing: blurBackground ? "blur" : "crop",
         }),
@@ -426,6 +429,13 @@ const HeroForm: React.FC = () => {
               onChange={setClipDuration}
               disabled={isBusy}
             />
+            <SegmentedControl<number>
+              label="Clips"
+              options={CLIP_COUNTS.map(count => ({ id: count, label: String(count) }))}
+              value={clipCount}
+              onChange={setClipCount}
+              disabled={isBusy}
+            />
             <div className="flex items-center gap-5">
               <Toggle
                 label={captionsAvailable ? "Captions" : "No captions available"}
@@ -481,7 +491,7 @@ const HeroForm: React.FC = () => {
       {previews && previews.length > 0 && (
         <div className="mt-8 flex flex-col items-center">
           <div
-            className="relative w-full max-w-6xl flex items-center justify-center px-4"
+            className="relative w-full max-w-6xl flex items-center justify-center px-12 md:px-4"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -512,7 +522,7 @@ const HeroForm: React.FC = () => {
               )}
 
               {/* Current Preview */}
-              <div className="relative w-[270px] md:w-[360px] h-[540px] md:h-[720px] z-10">
+              <div className="relative w-full max-w-[270px] md:max-w-[360px] aspect-[9/16] z-10">
                 <div className="w-full h-full bg-gray-800 rounded-xl overflow-hidden shadow-2xl">
                   <video
                     key={previews[currentPreviewIndex].outputPath}
@@ -554,7 +564,7 @@ const HeroForm: React.FC = () => {
           </p>
 
           {canEdit && job?.videoDuration && (
-            <div className="mt-6 w-full flex justify-center px-4">
+            <div className="mt-6 w-full flex justify-center px-3">
               <HighlightGraph
                 title={GRAPH_TITLES[job.method ?? "evenly-spaced"]}
                 points={job.graph}
@@ -569,11 +579,11 @@ const HeroForm: React.FC = () => {
           )}
 
           {/* Download Buttons */}
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-col sm:flex-row flex-wrap justify-center gap-3 px-3">
             <a
               href={`${previews[currentPreviewIndex].outputPath}?download`}
               download
-              className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white transition-colors gap-2"
+              className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white transition-colors gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -584,7 +594,7 @@ const HeroForm: React.FC = () => {
               <a
                 href={`${BACKEND_URL}/api/jobs/${job.id}/zip`}
                 download
-                className="inline-flex items-center px-6 py-3 border border-gray-600 hover:bg-gray-800 rounded-lg font-semibold text-white transition-colors gap-2"
+                className="inline-flex items-center justify-center px-6 py-3 border border-gray-600 hover:bg-gray-800 rounded-lg font-semibold text-white transition-colors gap-2"
               >
                 Download All (.zip)
               </a>

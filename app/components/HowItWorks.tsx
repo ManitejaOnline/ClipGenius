@@ -45,8 +45,8 @@ const HowItWorks: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <h4 className="text-xl font-semibold text-white mb-2">AI Processing</h4>
-                <p className="text-gray-300">Our system transcribes the video and analyzes it using advanced AI algorithms.</p>
+                <h4 className="text-xl font-semibold text-white mb-2">Find the Highlights</h4>
+                <p className="text-gray-300">ClipGenius checks which parts of the video viewers replay most and picks the strongest moments.</p>
               </div>
             </div>
 
@@ -66,8 +66,8 @@ const HowItWorks: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <h4 className="text-xl font-semibold text-white mb-2">Smart Editing</h4>
-                <p className="text-gray-300">The AI identifies the best moments and creates perfectly timed clips.</p>
+                <h4 className="text-xl font-semibold text-white mb-2">Cut & Caption</h4>
+                <p className="text-gray-300">Each moment is cut to your chosen length, framed for vertical, and captioned.</p>
               </div>
             </div>
 

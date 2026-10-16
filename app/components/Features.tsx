@@ -23,10 +23,10 @@ const Features: React.FC = () => {
               </svg>
             </div>
             <h4 className="text-xl font-semibold mb-2 text-blue-400">
-              AI Highlight Detection
+              Highlight Detection
             </h4>
             <p className="text-gray-300">
-              Detects the most exciting or emotional moments using keyword + sentiment analysis.
+              Finds the moments viewers replay most using YouTube&apos;s &quot;Most replayed&quot; data, or the loudest moments when that isn&apos;t available.
             </p>
           </div>
           <div className="p-6 rounded-lg bg-gray-800 hover:bg-gray-750 transition-colors">
@@ -47,10 +47,10 @@ const Features: React.FC = () => {
               </svg>
             </div>
             <h4 className="text-xl font-semibold mb-2 text-blue-400">
-              Auto Clip & Format
+              Clips with Captions
             </h4>
             <p className="text-gray-300">
-              Automatically trims and resizes clips for 9:16 vertical Shorts using ffmpeg.
+              Cuts 15, 30 or 60 second clips, frames them for 9:16 vertical, and burns in word-by-word captions in the video&apos;s own language.
             </p>
           </div>
           <div className="p-6 rounded-lg bg-gray-800 hover:bg-gray-750 transition-colors">
